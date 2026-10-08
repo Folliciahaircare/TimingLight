@@ -1,4 +1,5 @@
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Timing Light</title>
 <style>
   :root{
@@ -27,13 +28,13 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    padding:24px 16px;
-    padding-block:32px;
+    padding:clamp(12px,3vw,24px);
+    padding-block:clamp(16px,5vh,32px);
   }
   a,button{font-family:inherit;}
   .console{
     width:100%;
-    max-width:640px;
+    max-width:clamp(320px, 100%, 640px);
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -101,7 +102,7 @@
   .clock{
     font-family:'JetBrains Mono',ui-monospace,monospace;
     font-weight:700;
-    font-size:clamp(64px,17vw,132px);
+    font-size:clamp(48px,18vw,132px);
     line-height:1;
     letter-spacing:.01em;
     font-variant-numeric:tabular-nums;
@@ -129,9 +130,10 @@
     border:1px solid var(--bezel);
     background:#14181a;
     color:var(--text);
-    padding:10px 18px;
+    padding:clamp(10px, 2.5vh, 14px) clamp(16px, 3vw, 24px);
     border-radius:10px;
-    font-size:14px;
+    font-size:clamp(13px, 3vw, 14px);
+    min-height:44px;
     font-weight:600;
     letter-spacing:.02em;
     cursor:pointer;
@@ -246,6 +248,13 @@
   #pipCanvas{display:none;}
   #pipVideo{position:fixed;bottom:-200px;width:2px;height:2px;opacity:0;pointer-events:none;}
 
+  @media (max-width:768px){
+    #pipBtn{display:none;}
+  }
+  
+    .preset-btn{padding:8px 12px;font-size:12px;}
+  .preset-btn.active{border-color:var(--focus);}
+  
   @media (max-width:420px){
     .settings{grid-template-columns:1fr 1fr 1fr;gap:8px;}
     .field{padding:8px;}
@@ -255,6 +264,22 @@
 
 <div class="console">
   <div class="brand"><b>Timing Light</b></div>
+  
+  <div class="facepanel" id="setupPanel" style="background:#14181a;padding:16px;gap:12px;">
+    <div style="font-size:12px;letter-spacing:.08em;color:#7c8a85;">Timer Duration</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+      <button class="ctl preset-btn" data-minutes="1">1 min</button>
+      <button class="ctl preset-btn" data-minutes="5">5 min</button>
+      <button class="ctl preset-btn active" data-minutes="8">8 min</button>
+      <button class="ctl preset-btn" data-minutes="10">10 min</button>
+      <button class="ctl preset-btn" data-minutes="20">20 min</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+      <label for="customDuration" style="font-size:12px;color:#7c8a85;">Or custom:</label>
+      <input type="number" id="customDuration" min="1" max="120" value="8" style="width:50px;padding:6px;background:#0f1315;border:1px solid #333;border-radius:6px;color:#e9ece8;text-align:center;font-size:13px;">
+      <span style="font-size:12px;color:#7c8a85;">min</span>
+    </div>
+  </div>
 
   <div class="facepanel">
     <div class="lights" id="lights">
@@ -369,6 +394,51 @@ const BELL_B64 = "SUQzBAAAAAACD1RYWFgAAAASAAADbWFqb3JfYnJhbmQATTRWIABUWFhYAAAAEQ
   let soundOn = true;
 
   let audioCtx = null;
+
+  // Duration management
+  let totalMinutes = 8;
+  const presetBtns = document.querySelectorAll('.preset-btn');
+  const customDurationInput = document.getElementById('customDuration');
+  const setupPanel = document.getElementById('setupPanel');
+  
+  function updateDurationThresholds(mins) {
+    totalMinutes = mins;
+    // Calculate percentages: 75%, 87.5%, 100% of duration
+    thresholds.g = Math.round(mins * 0.75 * 60);
+    thresholds.a = Math.round(mins * 0.875 * 60);
+    thresholds.r = mins * 60;
+    
+    // Update labels
+    document.getElementById('labelG').textContent = fmt(thresholds.g);
+    document.getElementById('labelA').textContent = fmt(thresholds.a);
+    document.getElementById('labelR').textContent = fmt(thresholds.r);
+    
+    // Update input fields
+    tGInput.value = fmt(thresholds.g);
+    tAInput.value = fmt(thresholds.a);
+    tRInput.value = fmt(thresholds.r);
+  }
+  
+  presetBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      presetBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const mins = parseInt(btn.dataset.minutes);
+      customDurationInput.value = mins;
+      updateDurationThresholds(mins);
+    });
+  });
+  
+  customDurationInput.addEventListener('change', () => {
+    const mins = Math.max(1, Math.min(120, parseInt(customDurationInput.value) || 8));
+    customDurationInput.value = mins;
+    presetBtns.forEach(b => b.classList.remove('active'));
+    updateDurationThresholds(mins);
+  });
+  
+  // Initialize with 8 minutes
+  updateDurationThresholds(8);
+
   let volume = 0.55;
   let toneType = 'bell';
   let customBuffer = null;
