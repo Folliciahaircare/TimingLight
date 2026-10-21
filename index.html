@@ -549,9 +549,15 @@ const BELL_B64 = "SUQzBAAAAAACD1RYWFgAAAASAAADbWFqb3JfYnJhbmQATTRWIABUWFhYAAAAEQ
       elapsed += dt;
       render();
     }
-    rafId = requestAnimationFrame(tick);
   }
-  rafId = requestAnimationFrame(tick);
+  // Worker timer: keeps ticking (and redrawing the PiP) while Chrome is in the
+  // background behind fullscreen Slides, where requestAnimationFrame is paused.
+  try{
+    const w = new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),250)'], {type:'text/javascript'})));
+    w.onmessage = () => tick(performance.now());
+  }catch(e){
+    setInterval(() => tick(performance.now()), 250);
+  }
 
   function toggleRun(){
     running = !running;
