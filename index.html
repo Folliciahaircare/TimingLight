@@ -248,10 +248,6 @@
   #pipCanvas{display:none;}
   #pipVideo{position:fixed;bottom:-200px;width:2px;height:2px;opacity:0;pointer-events:none;}
 
-  @media (max-width:768px){
-    #pipBtn{display:none;}
-  }
-  
     .preset-btn{padding:8px 12px;font-size:12px;}
   .preset-btn.active{border-color:var(--focus);}
   
@@ -303,7 +299,7 @@
     <div class="soundpanel" id="soundpanel">
       <div class="volrow">
         <label for="volSlider">Volume</label>
-        <input type="range" id="volSlider" min="0" max="100" value="55">
+        <input type="range" id="volSlider" min="0" max="200" value="55">
         <span id="volLabel">55%</span>
       </div>
       <select class="toneSelect" id="toneSelect" aria-label="Alert sound">
@@ -351,6 +347,8 @@ const BELL_B64 = "SUQzBAAAAAACD1RYWFgAAAASAAADbWFqb3JfYnJhbmQATTRWIABUWFhYAAAAEQ
   const resetBtn = document.getElementById('resetBtn');
   const soundBtn = document.getElementById('soundBtn');
   const pipBtn = document.getElementById('pipBtn');
+  if(!document.pictureInPictureEnabled) pipBtn.style.display = 'none';
+  const ms = 'mediaSession' in navigator ? navigator.mediaSession : null;
   const soundpanel = document.getElementById('soundpanel');
   const volSlider = document.getElementById('volSlider');
   const volLabel = document.getElementById('volLabel');
@@ -537,6 +535,7 @@ const BELL_B64 = "SUQzBAAAAAACD1RYWFgAAAASAAADbWFqb3JfYnJhbmQATTRWIABUWFhYAAAAEQ
     } else if(phase !== lastPhase){
       lastPhase = phase;
     }
+    if(ms) ms.playbackState = running ? 'playing' : 'paused';
     hintEl.textContent = running ? 'click to pause' : (elapsed > 0 ? 'click to resume' : 'click to start');
     drawPip(phase);
   }
@@ -687,6 +686,17 @@ const BELL_B64 = "SUQzBAAAAAACD1RYWFgAAAASAAADbWFqb3JfYnJhbmQATTRWIABUWFhYAAAAEQ
     }
   });
   pipVideo.addEventListener('leavepictureinpicture', () => {});
+
+  if(ms){
+    ms.metadata = new MediaMetadata({ title: 'Timing Light' });
+    const setRun = (want) => {
+      if(running !== want) toggleRun();
+      pipVideo.play().catch(() => {});
+    };
+    ms.setActionHandler('play', () => setRun(true));
+    ms.setActionHandler('pause', () => setRun(false));
+    ms.setActionHandler('previoustrack', () => reset());
+  }
 
   render();
 })();
